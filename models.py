@@ -42,6 +42,7 @@ class User(Model):
 
 
 class Recipe(Model):
+    id = fields.IntField(pk=True)
     author = fields.ForeignKeyField(
         "models.User", related_name="recipes", description="автор (пользователь)"
     )
