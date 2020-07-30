@@ -14,16 +14,16 @@ class DBAuthorizationPolicy(AbstractAuthorizationPolicy):
         if identity is None:
             return False
 
-        user = await User.get(id=int(identity))
-        if not user:
+        user = await User.get_or_none(id=int(identity))
+        if user is None:
             return False
 
         return getattr(user, permission, True)
 
 
 async def check_credentials(login: str, password: str):
-    user = await User.get(login=login)
-    if not user:
+    user = await User.get_or_none(login=login)
+    if user is None:
         return False
 
     return user.verify_password(password)

@@ -26,9 +26,19 @@ class User(Model):
         through="favorites",
         description="избранные рецепты",
     )
+    recipes: fields.ReverseRelation["Recipe"]
 
     def verify_password(self, password: str):
         return pwd_context.verify(password, self.password_hash)
+
+    async def get_profile(self):
+        await self.fetch_related("recipes")
+        return {
+            "id": self.id,
+            "login": self.login,
+            "status": "active",
+            "recipe_count": len(self.recipes),
+        }
 
 
 class Recipe(Model):

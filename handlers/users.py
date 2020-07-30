@@ -26,31 +26,22 @@ class Users(web.View, CorsViewMixin):
 
 
 class UsersID(web.View, CorsViewMixin):
-    @staticmethod
-    async def get_user_profile(user_id: int):
-        user = await User.get(pk=user_id)
-        await user.fetch_related("recipes")
-        return {
-            "id": user_id,
-            "login": user.login,
-            "status": "active",
-            "recipe_count": len(user.recipes),
-        }
-
     async def get(self):
         """Возвращает профиль пользователя"""
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
         user_id = int(self.request.match_info["id"])
-        return web.json_response(await self.get_user_profile(user_id))
+        user = await User.get(pk=user_id)
+        return web.json_response(await user.get_profile())
 
 
-class UsersMe(UsersID):  # Наследует от UsersID
+class UsersMe(web.View, CorsViewMixin):
     async def get(self):
         """Возвращает профиль авторизированного пользователя"""
         user_id = int(await check_authorized(self.request))
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
-        return web.json_response(await self.get_user_profile(user_id))
+        user = await User.get(pk=user_id)
+        return web.json_response(await user.get_profile())
