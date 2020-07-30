@@ -3,6 +3,7 @@ from aiohttp_cors import CorsViewMixin
 from aiohttp_security import remember
 
 from db_auth import check_credentials
+from models import User
 
 
 class Login(web.View, CorsViewMixin):
@@ -12,5 +13,6 @@ class Login(web.View, CorsViewMixin):
             raise web.HTTPUnauthorized
 
         response = web.HTTPOk
-        await remember(self.request, response, json["login"])
+        user = await User.get(login=json["login"]).only("id")
+        await remember(self.request, response, str(user.id))
         raise response
