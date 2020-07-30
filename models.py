@@ -36,7 +36,7 @@ class User(Model):
         return {
             "id": self.id,
             "login": self.login,
-            "status": "active",
+            "status": "active" if self.is_active else "blocked",
             "recipe_count": len(self.recipes),
         }
 
@@ -67,6 +67,22 @@ class Recipe(Model):
         description="набор хештегов",
         null=True,
     )
+    cooking_steps: fields.ReverseRelation["CookingStep"]
+
+    async def to_dict(self):
+        await self.fetch_related("likes", "hashtags", "author")
+        return {
+            "id": self.id,
+            "author": self.author.login,
+            "created_at": self.created_at.isoformat(),
+            "name": self.name,
+            "description": self.description,
+            "final_dish_photo": self.final_dish_photo,
+            "dish_type": str(self.dish_type).split(".")[-1],
+            "status": "active" if self.is_active else "blocked",
+            "likes": len(self.likes),
+            "hashtags": [hashtag.name for hashtag in list(self.hashtags)],
+        }
 
 
 class CookingStep(Model):
