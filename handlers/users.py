@@ -2,11 +2,28 @@ from aiohttp import web
 from aiohttp_cors import CorsViewMixin
 from aiohttp_security import remember, check_authorized, permits
 from passlib.apps import custom_app_context as pwd_context
+from tortoise.functions import Count
 
 from models import User
 
 
 class Users(web.View, CorsViewMixin):
+    async def get(self):
+        """Возвращает список пользователей, отсортированный по кол-ву рецептов.
+        По умолчанию первые 10.
+        """
+        limit = int(self.request.query.get("limit", "10"))
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        users = (
+            await User.all()
+            .annotate(recipes_count=Count("recipes"))
+            .order_by("-recipes_count")
+            .limit(limit)
+        )
+        return web.json_response([await user.get_profile() for user in users])
+
     async def post(self):
         """Создает нового пользователя"""
         json = await self.request.json()
