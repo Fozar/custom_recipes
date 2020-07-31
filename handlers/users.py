@@ -61,6 +61,31 @@ class UsersID(web.View, CorsViewMixin):
             raise web.HTTPNotFound
         return web.json_response(await user.to_dict())
 
+    async def put(self):
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        if self.request.match_info["id"] != "@me":
+            if not await permits(self.request, "is_admin"):
+                raise web.HTTPForbidden
+
+            try:
+                user_id = int(self.request.match_info["id"])
+            except ValueError:
+                raise web.HTTPBadRequest
+        else:
+            user_id = int(await check_authorized(self.request))
+        json = await self.request.json()
+
+        if await User.filter(login=json["login"]).exists():
+            raise web.HTTPConflict
+
+        q = await User.filter(pk=user_id).update(login=json["login"])
+        if not q:
+            raise web.HTTPNotFound
+
+        raise web.HTTPNoContent
+
 
 class UsersIDStatus(web.View, CorsViewMixin):
     async def patch(self):
