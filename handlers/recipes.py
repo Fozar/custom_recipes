@@ -75,7 +75,7 @@ class Recipes(web.View, CorsViewMixin):
         )
 
 
-class RecipeID(web.View, CorsViewMixin):
+class RecipesID(web.View, CorsViewMixin):
     async def get(self):
         """Возвращает рецепт"""
         if not await permits(self.request, "is_active"):
@@ -89,7 +89,7 @@ class RecipeID(web.View, CorsViewMixin):
         return web.json_response(await recipe.to_dict(False))
 
 
-class RecipeIDStatus(web.View, CorsViewMixin):
+class RecipesIDStatus(web.View, CorsViewMixin):
     async def patch(self):
         """Устанавливает статус рецепта"""
         if not await permits(self.request, "is_admin"):
@@ -110,7 +110,7 @@ class RecipeIDStatus(web.View, CorsViewMixin):
         raise web.HTTPNoContent
 
 
-class RecipeIDLike(web.View, CorsViewMixin):
+class RecipesIDLike(web.View, CorsViewMixin):
     async def get_recipe(self):
         recipe_id = int(self.request.match_info["id"])
         recipe = await Recipe.get_or_none(pk=recipe_id)
@@ -144,7 +144,7 @@ class RecipeIDLike(web.View, CorsViewMixin):
         raise web.HTTPNoContent
 
 
-class RecipeIDFavorite(web.View, CorsViewMixin):
+class RecipesIDFavorite(web.View, CorsViewMixin):
     async def get_recipe(self):
         recipe_id = int(self.request.match_info["id"])
         recipe = await Recipe.get_or_none(pk=recipe_id)
