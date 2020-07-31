@@ -77,6 +77,7 @@ class Recipe(Model):
         result = {
             "id": self.id,
             "author": self.author.login,
+            "author_status": "active" if self.author.is_active else "blocked",
             "created_at": self.created_at.isoformat(),
             "name": self.name,
             "description": self.description,
@@ -93,7 +94,6 @@ class Recipe(Model):
                         step.to_dict() for step in list(self.cooking_steps)
                     ],
                     "author_id": self.author.id,
-                    "author_status": "active" if self.author.is_active else "blocked",
                 }
             )
 
