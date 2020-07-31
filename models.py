@@ -69,9 +69,12 @@ class Recipe(Model):
     )
     cooking_steps: fields.ReverseRelation["CookingStep"]
 
-    async def to_dict(self):
-        await self.fetch_related("likes", "hashtags", "author")
-        return {
+    async def to_dict(self, short: bool = True):
+        fetch = ["likes", "hashtags", "author"]
+        if not short:
+            fetch.append("cooking_steps")
+        await self.fetch_related(*fetch)
+        result = {
             "id": self.id,
             "author": self.author.login,
             "created_at": self.created_at.isoformat(),
@@ -83,6 +86,18 @@ class Recipe(Model):
             "likes": len(self.likes),
             "hashtags": [hashtag.name for hashtag in list(self.hashtags)],
         }
+        if not short:
+            result.update(
+                {
+                    "cooking_steps": [
+                        step.to_dict() for step in list(self.cooking_steps)
+                    ],
+                    "author_id": self.author.id,
+                    "author_status": "active" if self.author.is_active else "blocked",
+                }
+            )
+
+        return result
 
 
 class CookingStep(Model):
@@ -92,6 +107,9 @@ class CookingStep(Model):
     order = fields.IntField(description="порядок, номер шага")
     text = fields.TextField(description="текст, описание")
     photo = fields.TextField(null=True, description="фотография (ссылка)")
+
+    def to_dict(self):
+        return {"order": self.order, "text": self.text, "photo": self.photo}
 
 
 class Hashtag(Model):

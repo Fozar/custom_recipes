@@ -73,3 +73,14 @@ class Recipes(web.View, CorsViewMixin):
         raise web.HTTPCreated(
             headers={"Location": str(self.request.url / str(recipe.id))}
         )
+
+
+class RecipeID(web.View, CorsViewMixin):
+    async def get(self):
+        """Возвращает рецепт"""
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        recipe_id = int(self.request.match_info["id"])
+        recipe = await Recipe.get(pk=recipe_id)
+        return web.json_response(await recipe.to_dict(False))
