@@ -84,3 +84,24 @@ class RecipeID(web.View, CorsViewMixin):
         recipe_id = int(self.request.match_info["id"])
         recipe = await Recipe.get(pk=recipe_id)
         return web.json_response(await recipe.to_dict(False))
+
+
+class RecipeIDStatus(web.View, CorsViewMixin):
+    async def patch(self):
+        """Устанавливает статус рецепта"""
+        if not await permits(self.request, "is_admin"):
+            raise web.HTTPForbidden
+
+        recipe_id = int(self.request.match_info["id"])
+        json = await self.request.json()
+        if json["status"] == "active":
+            status = True
+        elif json["status"] == "blocked":
+            status = False
+        else:
+            raise web.HTTPBadRequest
+        query = await Recipe.filter(pk=recipe_id).update(is_active=status)
+        if not query:
+            raise web.HTTPNotFound
+
+        raise web.HTTPNoContent

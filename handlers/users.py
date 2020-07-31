@@ -53,5 +53,32 @@ class UsersID(web.View, CorsViewMixin):
             user_id = int(await check_authorized(self.request))
         else:
             user_id = int(user_id_str)
-        user = await User.get(pk=user_id)
+        user = await User.get_or_none(pk=user_id)
+        if not user:
+            raise web.HTTPNotFound
         return web.json_response(await user.to_dict())
+
+
+class UsersIDStatus(web.View, CorsViewMixin):
+    async def patch(self):
+        """Устанавливает статус пользователя"""
+        if not await permits(self.request, "is_admin"):
+            raise web.HTTPForbidden
+
+        user_id_str = self.request.match_info["id"]
+        if user_id_str == "@me":
+            user_id = int(await check_authorized(self.request))
+        else:
+            user_id = int(user_id_str)
+        json = await self.request.json()
+        if json["status"] == "active":
+            status = True
+        elif json["status"] == "blocked":
+            status = False
+        else:
+            raise web.HTTPBadRequest
+        query = await User.filter(pk=user_id).update(is_active=status)
+        if not query:
+            raise web.HTTPNotFound
+
+        raise web.HTTPNoContent
