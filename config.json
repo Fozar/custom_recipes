@@ -1,3 +1,7 @@
 {
-  "db_url": "postgres://postgres:superuserpassword@localhost/custom_recipes"
+  "db_url": "postgres://postgres:superuserpassword@localhost/custom_recipes",
+  "superuser": {
+    "login": "admin",
+    "password": "admin"
+  }
 }
