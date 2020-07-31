@@ -12,10 +12,10 @@ class Users(web.View, CorsViewMixin):
         """Возвращает список пользователей, отсортированный по кол-ву рецептов.
         По умолчанию первые 10.
         """
-        limit = int(self.request.query.get("limit", "10"))
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
+        limit = int(self.request.query.get("limit", "10"))
         users = (
             await User.all()
             .annotate(recipes_count=Count("recipes"))
@@ -52,7 +52,10 @@ class UsersID(web.View, CorsViewMixin):
         if user_id_str == "@me":
             user_id = int(await check_authorized(self.request))
         else:
-            user_id = int(user_id_str)
+            try:
+                user_id = int(user_id_str)
+            except ValueError:
+                raise web.HTTPBadRequest
         user = await User.get_or_none(pk=user_id)
         if not user:
             raise web.HTTPNotFound
@@ -69,7 +72,10 @@ class UsersIDStatus(web.View, CorsViewMixin):
         if user_id_str == "@me":
             user_id = int(await check_authorized(self.request))
         else:
-            user_id = int(user_id_str)
+            try:
+                user_id = int(user_id_str)
+            except ValueError:
+                raise web.HTTPBadRequest
         json = await self.request.json()
         if json["status"] == "active":
             status = True
@@ -82,3 +88,27 @@ class UsersIDStatus(web.View, CorsViewMixin):
             raise web.HTTPNotFound
 
         raise web.HTTPNoContent
+
+
+class UsersIDFavorites(web.View, CorsViewMixin):
+    async def get(self):
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        user_id_str = self.request.match_info["id"]
+        if user_id_str == "@me":
+            user_id = int(await check_authorized(self.request))
+        else:
+            try:
+                user_id = int(user_id_str)
+            except ValueError:
+                raise web.HTTPBadRequest
+        user = await User.get_or_none(pk=user_id)
+        if not user:
+            raise web.HTTPNotFound
+
+        await user.fetch_related("favorites")
+
+        return web.json_response(
+            [await recipe.to_dict() for recipe in list(user.favorites)]
+        )
