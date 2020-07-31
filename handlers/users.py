@@ -48,17 +48,10 @@ class UsersID(web.View, CorsViewMixin):
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
-        user_id = int(self.request.match_info["id"])
-        user = await User.get(pk=user_id)
-        return web.json_response(await user.to_dict())
-
-
-class UsersMe(web.View, CorsViewMixin):
-    async def get(self):
-        """Возвращает профиль авторизированного пользователя"""
-        user_id = int(await check_authorized(self.request))
-        if not await permits(self.request, "is_active"):
-            raise web.HTTPForbidden
-
+        user_id_str = self.request.match_info["id"]
+        if user_id_str == "@me":
+            user_id = int(await check_authorized(self.request))
+        else:
+            user_id = int(user_id_str)
         user = await User.get(pk=user_id)
         return web.json_response(await user.to_dict())
