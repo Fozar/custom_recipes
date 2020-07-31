@@ -31,7 +31,7 @@ class User(Model):
     def verify_password(self, password: str):
         return pwd_context.verify(password, self.password_hash)
 
-    async def get_profile(self):
+    async def to_dict(self):
         await self.fetch_related("recipes")
         return {
             "id": self.id,

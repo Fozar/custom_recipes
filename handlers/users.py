@@ -22,7 +22,7 @@ class Users(web.View, CorsViewMixin):
             .order_by("-recipes_count")
             .limit(limit)
         )
-        return web.json_response([await user.get_profile() for user in users])
+        return web.json_response([await user.to_dict() for user in users])
 
     async def post(self):
         """Создает нового пользователя"""
@@ -50,7 +50,7 @@ class UsersID(web.View, CorsViewMixin):
 
         user_id = int(self.request.match_info["id"])
         user = await User.get(pk=user_id)
-        return web.json_response(await user.get_profile())
+        return web.json_response(await user.to_dict())
 
 
 class UsersMe(web.View, CorsViewMixin):
@@ -61,4 +61,4 @@ class UsersMe(web.View, CorsViewMixin):
             raise web.HTTPForbidden
 
         user = await User.get(pk=user_id)
-        return web.json_response(await user.get_profile())
+        return web.json_response(await user.to_dict())
