@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from aiohttp import web
 from aiohttp_cors import setup as setup_cors, ResourceOptions
@@ -19,14 +20,16 @@ else:
 
 async def init_db(app):
     await Tortoise.init(
-        db_url="postgres://postgres:superuserpassword@localhost/custom_recipes",  # TODO: Вынести в конфиг
-        modules={"models": ["models"]},
+        db_url=app["config"]["db_url"], modules={"models": ["models"]},
     )
     await Tortoise.generate_schemas()
 
 
 def main():
     app = web.Application()
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    app["config"] = config
     cors = setup_cors(
         app,
         defaults={

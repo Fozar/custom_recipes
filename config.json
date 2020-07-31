@@ -1,0 +1,3 @@
+{
+  "db_url": "postgres://postgres:superuserpassword@localhost/custom_recipes"
+}
