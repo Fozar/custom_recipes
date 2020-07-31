@@ -142,3 +142,37 @@ class RecipeIDLike(web.View, CorsViewMixin):
         user = await self.get_user()
         await recipe.likes.remove(user)
         raise web.HTTPNoContent
+
+
+class RecipeIDFavorite(web.View, CorsViewMixin):
+    async def get_recipe(self):
+        recipe_id = int(self.request.match_info["id"])
+        recipe = await Recipe.get_or_none(pk=recipe_id)
+        if not recipe:
+            raise web.HTTPNotFound
+
+        return recipe
+
+    async def get_user(self):
+        user_id = int(await check_authorized(self.request))
+        return await User.get(pk=user_id)
+
+    async def put(self):
+        """Добавляет рецепт в израбранное"""
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        recipe = await self.get_recipe()
+        user = await self.get_user()
+        await user.favorites.add(recipe)
+        raise web.HTTPNoContent
+
+    async def delete(self):
+        """Удаляет рецепт из избранного"""
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        recipe = await self.get_recipe()
+        user = await self.get_user()
+        await user.favorites.remove(recipe)
+        raise web.HTTPNoContent
