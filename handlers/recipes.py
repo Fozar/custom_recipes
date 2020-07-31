@@ -82,7 +82,10 @@ class RecipeID(web.View, CorsViewMixin):
             raise web.HTTPForbidden
 
         recipe_id = int(self.request.match_info["id"])
-        recipe = await Recipe.get(pk=recipe_id)
+        recipe = await Recipe.get_or_none(pk=recipe_id)
+        if not recipe:
+            raise web.HTTPNotFound
+
         return web.json_response(await recipe.to_dict(False))
 
 
@@ -104,4 +107,38 @@ class RecipeIDStatus(web.View, CorsViewMixin):
         if not query:
             raise web.HTTPNotFound
 
+        raise web.HTTPNoContent
+
+
+class RecipeIDLike(web.View, CorsViewMixin):
+    async def get_recipe(self):
+        recipe_id = int(self.request.match_info["id"])
+        recipe = await Recipe.get_or_none(pk=recipe_id)
+        if not recipe:
+            raise web.HTTPNotFound
+
+        return recipe
+
+    async def get_user(self):
+        user_id = int(await check_authorized(self.request))
+        return await User.get(pk=user_id)
+
+    async def put(self):
+        """Добавляет лайк"""
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        recipe = await self.get_recipe()
+        user = await self.get_user()
+        await recipe.likes.add(user)
+        raise web.HTTPNoContent
+
+    async def delete(self):
+        """Удаляет лайк"""
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        recipe = await self.get_recipe()
+        user = await self.get_user()
+        await recipe.likes.remove(user)
         raise web.HTTPNoContent

@@ -1,6 +1,6 @@
 from handlers.login import Login
 from handlers.logout import Logout
-from handlers.recipes import Recipes, RecipeID, RecipeIDStatus
+from handlers.recipes import Recipes, RecipeID, RecipeIDStatus, RecipeIDLike
 from handlers.users import Users, UsersID, UsersIDStatus
 
 
@@ -14,3 +14,4 @@ async def init_handlers(app):
     cors.add(app.router.add_route("*", "/recipes", Recipes))
     cors.add(app.router.add_route("*", r"/recipes/{id}", RecipeID))
     cors.add(app.router.add_route("*", r"/recipes/{id}/status", RecipeIDStatus))
+    cors.add(app.router.add_route("*", r"/recipes/{id}/like", RecipeIDLike))
