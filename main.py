@@ -58,7 +58,7 @@ def main():
     app.on_startup.append(init_db)
     app.on_startup.append(init_handlers)
     app.on_startup.append(init_superuser)
-    web.run_app(app, host="localhost", port=5000)
+    web.run_app(app, host=config["host"], port=config["port"])
 
 
 if __name__ == "__main__":

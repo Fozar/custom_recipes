@@ -1,4 +1,6 @@
 {
+  "host": "localhost",
+  "port": 5000,
   "db_url": "postgres://postgres:superuserpassword@localhost/custom_recipes",
   "superuser": {
     "login": "admin",
