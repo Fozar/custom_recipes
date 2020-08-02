@@ -128,6 +128,29 @@ class RecipesID(web.View, CorsViewMixin):
         await recipe.save()
         raise web.HTTPNoContent
 
+    async def delete(self):
+        """Удаляет рецепт"""
+        user_id = await check_authorized(self.request)
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        try:
+            recipe = await Recipe.get_or_none(
+                pk=int(self.request.match_info["recipe_id"])
+            )
+        except ValueError:
+            raise web.HTTPBadRequest
+
+        if not recipe:
+            raise web.HTTPNotFound
+
+        await recipe.fetch_related("author")
+        if recipe.author.id != int(user_id):
+            raise web.HTTPForbidden
+
+        await recipe.delete()
+        raise web.HTTPNoContent
+
 
 class RecipesIDStatus(web.View, CorsViewMixin):
     async def patch(self):
