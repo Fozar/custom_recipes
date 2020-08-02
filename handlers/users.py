@@ -1,6 +1,6 @@
 from aiohttp import web
 from aiohttp_cors import CorsViewMixin
-from aiohttp_security import remember, check_authorized, permits
+from aiohttp_security import remember, check_authorized, permits, forget
 from passlib.apps import custom_app_context as pwd_context
 from tortoise.functions import Count
 
@@ -85,6 +85,33 @@ class UsersID(web.View, CorsViewMixin):
             raise web.HTTPNotFound
 
         raise web.HTTPNoContent
+
+    async def delete(self):
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        if self.request.match_info["id"] != "@me":
+            if not await permits(self.request, "is_admin"):
+                raise web.HTTPForbidden
+
+            try:
+                user_id = int(self.request.match_info["id"])
+            except ValueError:
+                raise web.HTTPBadRequest
+        else:
+            user_id = int(await check_authorized(self.request))
+
+        user = await User.get_or_none(pk=user_id)
+        if not user:
+            raise web.HTTPNotFound
+
+        if user.login == self.request.app["config"]["superuser"]["login"]:
+            raise web.HTTPForbidden
+
+        response = web.HTTPNoContent
+        await forget(self.request, web.HTTPNoContent)
+        await user.delete()
+        raise response
 
 
 class UsersIDStatus(web.View, CorsViewMixin):
