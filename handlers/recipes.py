@@ -1,4 +1,5 @@
 from contextlib import suppress
+from json.decoder import JSONDecodeError
 
 from aiohttp import web
 from aiohttp_cors import CorsViewMixin
@@ -11,6 +12,7 @@ from models import User, Recipe, CookingStep, DishType
 class Recipes(web.View, CorsViewMixin):
     async def get(self):
         """Возвращает список рецептов"""
+        await check_authorized(self.request)
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
@@ -58,8 +60,10 @@ class Recipes(web.View, CorsViewMixin):
             raise web.HTTPForbidden
 
         user = await User.get(pk=user_id)
-
-        json = await self.request.json()
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
 
         try:
             steps = json.pop("cooking_steps")
@@ -78,11 +82,17 @@ class Recipes(web.View, CorsViewMixin):
 class RecipesID(web.View, CorsViewMixin):
     async def get(self):
         """Возвращает рецепт"""
+        await check_authorized(self.request)
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
-        recipe_id = int(self.request.match_info["id"])
-        recipe = await Recipe.get_or_none(pk=recipe_id)
+        try:
+            recipe = await Recipe.get_or_none(
+                pk=int(self.request.match_info["recipe_id"])
+            )
+        except ValueError:
+            raise web.HTTPBadRequest
+
         if not recipe:
             raise web.HTTPNotFound
 
@@ -92,11 +102,19 @@ class RecipesID(web.View, CorsViewMixin):
 class RecipesIDStatus(web.View, CorsViewMixin):
     async def patch(self):
         """Устанавливает статус рецепта"""
+        await check_authorized(self.request)
         if not await permits(self.request, "is_admin"):
             raise web.HTTPForbidden
 
-        recipe_id = int(self.request.match_info["id"])
-        json = await self.request.json()
+        try:
+            recipe_id = int(self.request.match_info["recipe_id"])
+        except ValueError:
+            raise web.HTTPBadRequest
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
         if json["status"] == "active":
             status = True
         elif json["status"] == "blocked":
@@ -112,8 +130,13 @@ class RecipesIDStatus(web.View, CorsViewMixin):
 
 class RecipesIDLike(web.View, CorsViewMixin):
     async def get_recipe(self):
-        recipe_id = int(self.request.match_info["id"])
-        recipe = await Recipe.get_or_none(pk=recipe_id)
+        try:
+            recipe = await Recipe.get_or_none(
+                pk=int(self.request.match_info["recipe_id"])
+            )
+        except ValueError:
+            raise web.HTTPBadRequest
+
         if not recipe:
             raise web.HTTPNotFound
 
@@ -121,33 +144,35 @@ class RecipesIDLike(web.View, CorsViewMixin):
 
     async def get_user(self):
         user_id = int(await check_authorized(self.request))
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
         return await User.get(pk=user_id)
 
     async def put(self):
         """Добавляет лайк"""
-        if not await permits(self.request, "is_active"):
-            raise web.HTTPForbidden
-
-        recipe = await self.get_recipe()
         user = await self.get_user()
+        recipe = await self.get_recipe()
         await recipe.likes.add(user)
         raise web.HTTPNoContent
 
     async def delete(self):
         """Удаляет лайк"""
-        if not await permits(self.request, "is_active"):
-            raise web.HTTPForbidden
-
-        recipe = await self.get_recipe()
         user = await self.get_user()
+        recipe = await self.get_recipe()
         await recipe.likes.remove(user)
         raise web.HTTPNoContent
 
 
 class RecipesIDFavorite(web.View, CorsViewMixin):
     async def get_recipe(self):
-        recipe_id = int(self.request.match_info["id"])
-        recipe = await Recipe.get_or_none(pk=recipe_id)
+        try:
+            recipe = await Recipe.get_or_none(
+                pk=int(self.request.match_info["recipe_id"])
+            )
+        except ValueError:
+            raise web.HTTPBadRequest
+
         if not recipe:
             raise web.HTTPNotFound
 
@@ -155,24 +180,21 @@ class RecipesIDFavorite(web.View, CorsViewMixin):
 
     async def get_user(self):
         user_id = int(await check_authorized(self.request))
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
         return await User.get(pk=user_id)
 
     async def put(self):
         """Добавляет рецепт в израбранное"""
-        if not await permits(self.request, "is_active"):
-            raise web.HTTPForbidden
-
-        recipe = await self.get_recipe()
         user = await self.get_user()
+        recipe = await self.get_recipe()
         await user.favorites.add(recipe)
         raise web.HTTPNoContent
 
     async def delete(self):
         """Удаляет рецепт из избранного"""
-        if not await permits(self.request, "is_active"):
-            raise web.HTTPForbidden
-
-        recipe = await self.get_recipe()
         user = await self.get_user()
+        recipe = await self.get_recipe()
         await user.favorites.remove(recipe)
         raise web.HTTPNoContent
