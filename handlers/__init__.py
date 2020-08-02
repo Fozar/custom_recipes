@@ -5,7 +5,7 @@ from handlers.recipes import (
     RecipesID,
     RecipesIDStatus,
     RecipesIDLike,
-    RecipesIDFavorite,
+    RecipesIDFavorite, RecipesIDStep, RecipesIDStepOrder,
 )
 from handlers.users import Users, UsersID, UsersIDStatus, UsersIDFavorites
 
@@ -19,7 +19,9 @@ async def init_handlers(app):
     cors.add(app.router.add_route("*", "/login", Login))
     cors.add(app.router.add_route("*", "/logout", Logout))
     cors.add(app.router.add_route("*", "/recipes", Recipes))
-    cors.add(app.router.add_route("*", r"/recipes/{id}", RecipesID))
-    cors.add(app.router.add_route("*", r"/recipes/{id}/status", RecipesIDStatus))
-    cors.add(app.router.add_route("*", r"/recipes/{id}/like", RecipesIDLike))
-    cors.add(app.router.add_route("*", r"/recipes/{id}/favorite", RecipesIDFavorite))
+    cors.add(app.router.add_route("*", r"/recipes/{recipe_id}", RecipesID))
+    cors.add(app.router.add_route("*", r"/recipes/{recipe_id}/status", RecipesIDStatus))
+    cors.add(app.router.add_route("*", r"/recipes/{recipe_id}/like", RecipesIDLike))
+    cors.add(app.router.add_route("*", r"/recipes/{recipe_id}/favorite", RecipesIDFavorite))
+    cors.add(app.router.add_route("*", r"/recipes/{recipe_id}/step", RecipesIDStep))
+    cors.add(app.router.add_route("*", r"/recipes/{recipe_id}/step/{order}", RecipesIDStepOrder))

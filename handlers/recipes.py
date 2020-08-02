@@ -5,6 +5,8 @@ from aiohttp import web
 from aiohttp_cors import CorsViewMixin
 from aiohttp_security import check_authorized, permits
 from tortoise.exceptions import FieldError
+from tortoise.expressions import F
+from tortoise.transactions import in_transaction
 
 from models import User, Recipe, CookingStep, DishType
 
@@ -97,6 +99,34 @@ class RecipesID(web.View, CorsViewMixin):
             raise web.HTTPNotFound
 
         return web.json_response(await recipe.to_dict(False))
+
+    async def put(self):
+        """Изменяет рецепт"""
+        user_id = await check_authorized(self.request)
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        try:
+            recipe = await Recipe.get_or_none(
+                pk=int(self.request.match_info["recipe_id"])
+            )
+        except ValueError:
+            raise web.HTTPBadRequest
+
+        if not recipe:
+            raise web.HTTPNotFound
+
+        await recipe.fetch_related("author")
+        if recipe.author.id != int(user_id):
+            raise web.HTTPForbidden
+
+        try:
+            recipe = recipe.update_from_dict(await self.request.json())
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
+        await recipe.save()
+        raise web.HTTPNoContent
 
 
 class RecipesIDStatus(web.View, CorsViewMixin):
@@ -198,3 +228,120 @@ class RecipesIDFavorite(web.View, CorsViewMixin):
         recipe = await self.get_recipe()
         await user.favorites.remove(recipe)
         raise web.HTTPNoContent
+
+
+class RecipesIDStep(web.View, CorsViewMixin):
+    async def post(self):
+        """Добавляет этап приготовления"""
+        user_id = int(await check_authorized(self.request))
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        try:
+            recipe = await Recipe.get_or_none(
+                pk=int(self.request.match_info["recipe_id"])
+            )
+        except ValueError:
+            raise web.HTTPBadRequest
+
+        if not recipe:
+            raise web.HTTPNotFound
+
+        await recipe.fetch_related("author")
+        if recipe.author.id != user_id:
+            raise web.HTTPForbidden
+
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
+        async with in_transaction():
+            await CookingStep.filter(recipe=recipe, order__gte=json["order"]).update(
+                order=F("order") + 1
+            )
+            step = await CookingStep.create(recipe=recipe, **json)
+        raise web.HTTPCreated(
+            headers={"Location": str(self.request.url / str(step.order))}
+        )
+
+
+class RecipesIDStepOrder(web.View, CorsViewMixin):
+    async def put(self):
+        """Изменяет этап приготовления"""
+        user_id = int(await check_authorized(self.request))
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        try:
+            async with in_transaction():
+                recipe = await Recipe.get_or_none(
+                    pk=int(self.request.match_info["recipe_id"])
+                )
+                order = int(self.request.match_info["order"])
+                step = await CookingStep.get_or_none(recipe=recipe, order=order).only(
+                    "id"
+                )
+        except ValueError:
+            raise web.HTTPBadRequest
+
+        if not recipe or not step:
+            raise web.HTTPNotFound
+
+        await recipe.fetch_related("author")
+        if recipe.author.id != user_id:
+            raise web.HTTPForbidden
+
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
+        async with in_transaction():
+            if "order" in json:
+                if json["order"] < order:
+                    await CookingStep.filter(
+                        recipe=recipe, order__gte=json["order"], order__lt=order
+                    ).update(order=F("order") + 1)
+                elif json["order"] > order:
+                    await CookingStep.filter(
+                        recipe=recipe, order__gt=order, order__lte=json["order"]
+                    ).update(order=F("order") - 1)
+            await CookingStep.filter(pk=step.pk).update(**json)
+
+        raise web.HTTPNoContent(
+            headers={"Location": str(self.request.url / str(json.get("order", order)))}
+        )
+
+    async def delete(self):
+        """Удаляет этап приготовления"""
+        user_id = int(await check_authorized(self.request))
+        if not await permits(self.request, "is_active"):
+            raise web.HTTPForbidden
+
+        try:
+            async with in_transaction():
+                recipe = await Recipe.get_or_none(
+                    pk=int(self.request.match_info["recipe_id"])
+                )
+                order = int(self.request.match_info["order"])
+                step = await CookingStep.get_or_none(recipe=recipe, order=order).only(
+                    "id"
+                )
+        except ValueError:
+            raise web.HTTPBadRequest
+
+        if not recipe or not step:
+            raise web.HTTPNotFound
+
+        await recipe.fetch_related("author")
+        if recipe.author.id != user_id:
+            raise web.HTTPForbidden
+
+        async with in_transaction():
+            await step.delete()
+            await CookingStep.filter(recipe=recipe, order__gt=order).update(
+                order=F("order") - 1
+            )
+
+        raise web.HTTPNoContent()
