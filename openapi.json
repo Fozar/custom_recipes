@@ -1,0 +1,1297 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Custom Recipes",
+    "contact": {
+      "email": "fozar97@gmail.com"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "User",
+      "description": "Операции над пользователями"
+    },
+    {
+      "name": "Recipe",
+      "description": "Операции над рецептами"
+    }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Возвращает список пользователей, отсортированный по кол-ву рецептов",
+        "operationId": "getUsers",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Максимальное количество пользователей",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Пользователь неавторизован или заблокирован.",
+            "content": {}
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Создает нового пользователя",
+        "operationId": "createUser",
+        "requestBody": {
+          "description": "Логин и пароль пользователя",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Пользователь создан",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительное тело",
+            "content": {}
+          },
+          "409": {
+            "description": "Пользователь с таким именем уже существует",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/users/login": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Вход пользователя",
+        "operationId": "login",
+        "requestBody": {
+          "description": "Логин и пароль пользователя",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительное тело",
+            "content": {}
+          },
+          "401": {
+            "description": "Неавторизован. Неверная пара логин/пароль",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/users/logout": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Выход пользователя",
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {}
+          },
+          "401": {
+            "description": "Неавторизован.",
+            "content": {}
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Находит пользователя по ID",
+        "description": "Если вместо ID указан @me, вернет авторизированного пользователя.",
+        "operationId": "getUserById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверно указан ID",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь неавторизован или заблокирован.",
+            "content": {}
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {}
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Обновляет логин пользователя",
+        "operationId": "updateUserLogin",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя или @me",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Updated name of the pet",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID или тело",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь неавторизован или заблокирован или пользователь пытается изменить логин другого пользователя, не являясь администратором",
+            "content": {}
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {}
+          },
+          "409": {
+            "description": "Пользователь с таким логином уже существует",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "login"
+      },
+      "delete": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Удаляет пользователя",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя или @me",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь неавторизован, заблокирован, пользователь пытается удалить другого пользователя, не являясь администратором или при попытке удалить суперпользователя.",
+            "content": {}
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {}
+          }
+        }
+      }
+    },
+    "/users/{id}/status": {
+      "patch": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Устанавливает статус пользователя",
+        "operationId": "updateUserStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя или @me",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Статус пользователя",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Status"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь не является администратором",
+            "content": {}
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "status"
+      }
+    },
+    "/users/{id}/favorites": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Возвращает избранные рецепты пользователя",
+        "operationId": "getUserFavorites",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя или @me",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeShort"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь не является администратором",
+            "content": {}
+          },
+          "404": {
+            "description": "Пользователь не найден",
+            "content": {}
+          }
+        }
+      }
+    },
+    "/recipes": {
+      "get": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Возвращает список рецептов",
+        "operationId": "getRecipes",
+        "parameters": [
+          {
+            "name": "hashtag",
+            "in": "query",
+            "description": "Фильтр по хештегу",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Фильтр по имени",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dish_type",
+            "in": "query",
+            "description": "Фильтр по типу блюда",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "Фильтр по автору",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "has_photo",
+            "in": "query",
+            "description": "Фильтр по наличию фото",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "description": "Сортировка",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Пагинация",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Масимальное количество возвращаемых рецептов",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipeShort"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Создает новый рецепт",
+        "operationId": "createRecipe",
+        "requestBody": {
+          "description": "Новый рецепт",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeNew"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Рецепт создан",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительное тело",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "recipe"
+      }
+    },
+    "/recipes/{recipe_id}": {
+      "get": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Найти рецепт по ID",
+        "operationId": "getRecipeById",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeFull"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Изменяет рецепт",
+        "operationId": "editRecipe",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Новый рецепт",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID или тело",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован или не является автором рецепта",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "recipe"
+      },
+      "delete": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Удаляет рецепт",
+        "operationId": "deleteRecipe",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован или не является автором рецепта",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}/status": {
+      "patch": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Устанавливает статус рецепта",
+        "operationId": "updateRecipeStatus",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Статус рецепта",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Status"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID или тело",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь не является администратором",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      }
+    },
+    "/recipes/{recipe_id}/like": {
+      "put": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Ставит лайк рецепту",
+        "operationId": "addLike",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Удаляет лайк с рецепта",
+        "operationId": "deleteLike",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}/favorite": {
+      "put": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Добавляет рецепт в избранное",
+        "operationId": "addRecipeToFavorite",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Удаляет рецепт из избранного",
+        "operationId": "deleteRecipeFromFavorite",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        }
+      }
+    },
+    "/recipes/{recipe_id}/step": {
+      "post": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Добавляет этап приготовления",
+        "operationId": "addCookingStep",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Новый этап приготовления",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookingStep"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Этап приготовления добавлен",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован или не является автором рецепта",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт не найден",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "cooking_step"
+      }
+    },
+    "/recipes/{recipe_id}/step/{order}": {
+      "put": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Изменяет этап приготовления",
+        "operationId": "editCookingStep",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "description": "Порядковый номер этапа приготовления",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Этап приготовления",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookingStep"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Этап приготовления изменен",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID или порядковый номер этапа",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован или не является автором рецепта",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт или этап приготовления не найден",
+            "content": {}
+          }
+        },
+        "x-codegen-request-body-name": "body"
+      },
+      "delete": {
+        "tags": [
+          "Recipe"
+        ],
+        "summary": "Удаляет этап приготовления",
+        "operationId": "deleteCookingStep",
+        "parameters": [
+          {
+            "name": "recipe_id",
+            "in": "path",
+            "description": "ID рецепта",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "order",
+            "in": "path",
+            "description": "Порядковый номер этапа приготовления",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Этап приготовления удален",
+            "content": {}
+          },
+          "400": {
+            "description": "Недействительный ID или порядковый номер этапа",
+            "content": {}
+          },
+          "401": {
+            "description": "Пользователь неавторизован",
+            "content": {}
+          },
+          "403": {
+            "description": "Пользователь заблокирован или не является автором рецепта",
+            "content": {}
+          },
+          "404": {
+            "description": "Рецепт или этап приготовления не найден",
+            "content": {}
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "login": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "blocked"
+            ]
+          },
+          "recipe_count": {
+            "type": "integer",
+            "description": "Количество рецептов"
+          }
+        }
+      },
+      "UserCredentials": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "blocked"
+            ]
+          }
+        }
+      },
+      "RecipeShort": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "author": {
+            "type": "string"
+          },
+          "author_status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "blocked"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "final_dish_photo": {
+            "type": "string"
+          },
+          "dish_type": {
+            "type": "string",
+            "enum": [
+              "SALAD",
+              "FIRST_COURSE",
+              "SECOND_COURSE",
+              "SOUP",
+              "DESSERT",
+              "DRINK"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "blocked"
+            ]
+          },
+          "likes": {
+            "type": "integer"
+          },
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CookingStep": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "photo": {
+            "type": "string"
+          }
+        }
+      },
+      "RecipeFull": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "author": {
+            "type": "string"
+          },
+          "author_status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "blocked"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "final_dish_photo": {
+            "type": "string"
+          },
+          "dish_type": {
+            "type": "string",
+            "enum": [
+              "SALAD",
+              "FIRST_COURSE",
+              "SECOND_COURSE",
+              "SOUP",
+              "DESSERT",
+              "DRINK"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "blocked"
+            ]
+          },
+          "likes": {
+            "type": "integer"
+          },
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cooking_steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CookingStep"
+            }
+          },
+          "author_id": {
+            "type": "integer"
+          }
+        }
+      },
+      "RecipeNew": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "final_dish_photo": {
+            "type": "string"
+          },
+          "dish_type": {
+            "type": "string",
+            "enum": [
+              "SALAD",
+              "FIRST_COURSE",
+              "SECOND_COURSE",
+              "SOUP",
+              "DESSERT",
+              "DRINK"
+            ]
+          },
+          "cooking_steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CookingStep"
+            }
+          }
+        }
+      },
+      "RecipeEdit": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "final_dish_photo": {
+            "type": "string"
+          },
+          "dish_type": {
+            "type": "string",
+            "enum": [
+              "SALAD",
+              "FIRST_COURSE",
+              "SECOND_COURSE",
+              "SOUP",
+              "DESSERT",
+              "DRINK"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
