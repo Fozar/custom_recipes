@@ -1,3 +1,5 @@
+from json.decoder import JSONDecodeError
+
 from aiohttp import web
 from aiohttp_cors import CorsViewMixin
 from aiohttp_security import remember
@@ -7,12 +9,16 @@ from models import User
 
 
 class Login(web.View, CorsViewMixin):
-    async def get(self):
-        json = await self.request.json()
+    async def post(self):
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
         if not await check_credentials(**json):
             raise web.HTTPUnauthorized
 
-        response = web.HTTPOk
+        response = web.HTTPCreated
         user = await User.get(login=json["login"]).only("id")
         await remember(self.request, response, str(user.id))
         raise response

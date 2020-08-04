@@ -1,3 +1,5 @@
+from json import JSONDecodeError
+
 from aiohttp import web
 from aiohttp_cors import CorsViewMixin
 from aiohttp_security import remember, check_authorized, permits, forget
@@ -15,7 +17,10 @@ class Users(web.View, CorsViewMixin):
         if not await permits(self.request, "is_active"):
             raise web.HTTPForbidden
 
-        limit = int(self.request.query.get("limit", "10"))
+        try:
+            limit = int(self.request.query.get("limit", "10"))
+        except ValueError:
+            limit = 10
         users = (
             await User.all()
             .annotate(recipes_count=Count("recipes"))
@@ -26,10 +31,14 @@ class Users(web.View, CorsViewMixin):
 
     async def post(self):
         """Создает нового пользователя"""
-        json = await self.request.json()
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
         try:
             if await User.exists(login=json["login"]):
-                raise web.HTTPBadRequest  # Пользователь с таким именем уже существует
+                raise web.HTTPConflict  # Пользователь с таким именем уже существует
         except KeyError:
             raise web.HTTPBadRequest
 
@@ -75,7 +84,10 @@ class UsersID(web.View, CorsViewMixin):
                 raise web.HTTPBadRequest
         else:
             user_id = int(await check_authorized(self.request))
-        json = await self.request.json()
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
 
         if await User.filter(login=json["login"]).exists():
             raise web.HTTPConflict
@@ -128,7 +140,12 @@ class UsersIDStatus(web.View, CorsViewMixin):
                 user_id = int(user_id_str)
             except ValueError:
                 raise web.HTTPBadRequest
-        json = await self.request.json()
+
+        try:
+            json = await self.request.json()
+        except JSONDecodeError:
+            raise web.HTTPBadRequest
+
         if json["status"] == "active":
             status = True
         elif json["status"] == "blocked":
