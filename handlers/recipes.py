@@ -4,7 +4,7 @@ from json.decoder import JSONDecodeError
 from aiohttp import web
 from aiohttp_cors import CorsViewMixin
 from aiohttp_security import check_authorized, permits
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, IntegrityError, ConfigurationError
 from tortoise.expressions import F
 from tortoise.transactions import in_transaction
 
@@ -72,7 +72,10 @@ class Recipes(web.View, CorsViewMixin):
         except KeyError:
             raise web.HTTPBadRequest
 
-        recipe = await Recipe.create(author=user, **json)
+        try:
+            recipe = await Recipe.create(author=user, **json)
+        except IntegrityError:
+            raise web.HTTPBadRequest
 
         for i, step in enumerate(steps):
             await CookingStep.create(recipe=recipe, order=i + 1, **step)
@@ -122,10 +125,10 @@ class RecipesID(web.View, CorsViewMixin):
 
         try:
             recipe = recipe.update_from_dict(await self.request.json())
-        except JSONDecodeError:
-            raise web.HTTPBadRequest
+            await recipe.save()
+        except (JSONDecodeError, ConfigurationError, ValueError, IntegrityError) as e:
+            raise web.HTTPBadRequest(reason=str(e))
 
-        await recipe.save()
         raise web.HTTPNoContent
 
     async def delete(self):
@@ -168,12 +171,16 @@ class RecipesIDStatus(web.View, CorsViewMixin):
         except JSONDecodeError:
             raise web.HTTPBadRequest
 
-        if json["status"] == "active":
-            status = True
-        elif json["status"] == "blocked":
-            status = False
-        else:
+        try:
+            if json["status"] == "active":
+                status = True
+            elif json["status"] == "blocked":
+                status = False
+            else:
+                raise web.HTTPBadRequest
+        except KeyError:
             raise web.HTTPBadRequest
+
         query = await Recipe.filter(pk=recipe_id).update(is_active=status)
         if not query:
             raise web.HTTPNotFound
@@ -279,11 +286,15 @@ class RecipesIDStep(web.View, CorsViewMixin):
         except JSONDecodeError:
             raise web.HTTPBadRequest
 
-        async with in_transaction():
-            await CookingStep.filter(recipe=recipe, order__gte=json["order"]).update(
-                order=F("order") + 1
-            )
-            step = await CookingStep.create(recipe=recipe, **json)
+        try:
+            async with in_transaction():
+                await CookingStep.filter(
+                    recipe=recipe, order__gte=json["order"]
+                ).update(order=F("order") + 1)
+                step = await CookingStep.create(recipe=recipe, **json)
+        except (KeyError, IntegrityError, ConfigurationError) as e:
+            raise web.HTTPBadRequest(reason=e)
+
         raise web.HTTPCreated(
             headers={"Location": str(self.request.url / str(step.order))}
         )
@@ -320,17 +331,20 @@ class RecipesIDStepOrder(web.View, CorsViewMixin):
         except JSONDecodeError:
             raise web.HTTPBadRequest
 
-        async with in_transaction():
-            if "order" in json:
-                if json["order"] < order:
-                    await CookingStep.filter(
-                        recipe=recipe, order__gte=json["order"], order__lt=order
-                    ).update(order=F("order") + 1)
-                elif json["order"] > order:
-                    await CookingStep.filter(
-                        recipe=recipe, order__gt=order, order__lte=json["order"]
-                    ).update(order=F("order") - 1)
-            await CookingStep.filter(pk=step.pk).update(**json)
+        try:
+            async with in_transaction():
+                if "order" in json:
+                    if json["order"] < order:
+                        await CookingStep.filter(
+                            recipe=recipe, order__gte=json["order"], order__lt=order
+                        ).update(order=F("order") + 1)
+                    elif json["order"] > order:
+                        await CookingStep.filter(
+                            recipe=recipe, order__gt=order, order__lte=json["order"]
+                        ).update(order=F("order") - 1)
+                await CookingStep.filter(pk=step.pk).update(**json)
+        except (KeyError, IntegrityError, ConfigurationError) as e:
+            raise web.HTTPBadRequest(reason=e)
 
         raise web.HTTPNoContent(
             headers={"Location": str(self.request.url / str(json.get("order", order)))}

@@ -19,6 +19,10 @@ class Login(web.View, CorsViewMixin):
             raise web.HTTPUnauthorized
 
         response = web.HTTPCreated
-        user = await User.get(login=json["login"]).only("id")
+        try:
+            user = await User.get(login=json["login"]).only("id")
+        except KeyError:
+            raise web.HTTPBadRequest
+
         await remember(self.request, response, str(user.id))
         raise response

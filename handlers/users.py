@@ -4,6 +4,7 @@ from aiohttp import web
 from aiohttp_cors import CorsViewMixin
 from aiohttp_security import remember, check_authorized, permits, forget
 from passlib.apps import custom_app_context as pwd_context
+from tortoise.exceptions import IntegrityError, IncompleteInstanceError
 from tortoise.functions import Count
 
 from models import User
@@ -39,11 +40,16 @@ class Users(web.View, CorsViewMixin):
         try:
             if await User.exists(login=json["login"]):
                 raise web.HTTPConflict  # Пользователь с таким именем уже существует
+
+            json["password_hash"] = pwd_context.hash(json.pop("password"))
         except KeyError:
             raise web.HTTPBadRequest
 
-        json["password_hash"] = pwd_context.hash(json.pop("password"))
-        user = await User.create(**json)
+        try:
+            user = await User.create(**json)
+        except (IntegrityError, IncompleteInstanceError) as e:
+            raise web.HTTPBadRequest(reason=str(e))
+
         response = web.HTTPCreated(
             headers={"Location": str(self.request.url / str(user.id))}
         )
@@ -89,8 +95,11 @@ class UsersID(web.View, CorsViewMixin):
         except JSONDecodeError:
             raise web.HTTPBadRequest
 
-        if await User.filter(login=json["login"]).exists():
-            raise web.HTTPConflict
+        try:
+            if await User.filter(login=json["login"]).exists():
+                raise web.HTTPConflict
+        except KeyError:
+            raise web.HTTPBadRequest
 
         q = await User.filter(pk=user_id).update(login=json["login"])
         if not q:
@@ -146,11 +155,14 @@ class UsersIDStatus(web.View, CorsViewMixin):
         except JSONDecodeError:
             raise web.HTTPBadRequest
 
-        if json["status"] == "active":
-            status = True
-        elif json["status"] == "blocked":
-            status = False
-        else:
+        try:
+            if json["status"] == "active":
+                status = True
+            elif json["status"] == "blocked":
+                status = False
+            else:
+                raise web.HTTPBadRequest
+        except KeyError:
             raise web.HTTPBadRequest
         query = await User.filter(pk=user_id).update(is_active=status)
         if not query:
